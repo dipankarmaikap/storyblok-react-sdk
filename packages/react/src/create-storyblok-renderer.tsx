@@ -5,6 +5,7 @@ import { createResolver, ResolverConfig } from "./create-resolver";
 import type { SbBlokData } from "./types";
 
 const promiseCache = new Map<string, Map<unknown, Promise<unknown>>>();
+const MAX_CACHE_SIZE = 1000;
 const hasUse = typeof use === "function";
 const isServer = typeof window === "undefined";
 
@@ -42,6 +43,10 @@ function useCachedPromise(promise: Promise<unknown>, cacheKey: unknown, componen
   }
   let cached = compCache.get(cacheKey);
   if (!cached) {
+    if (compCache.size >= MAX_CACHE_SIZE) {
+      const first = compCache.keys().next().value;
+      if (first !== undefined) compCache.delete(first);
+    }
     cached = promise.catch((err: unknown) => {
       compCache!.delete(cacheKey);
       throw err;
@@ -85,31 +90,42 @@ export function createStoryblokRenderer(
       );
     }
 
-    // Client: call directly to detect async components for use()
-    const result = (Component as Function)({ blok });
+    // Client: function components can be called directly to detect async for use()
+    // Class components, forwardRef, memo, etc. must use JSX.
+    const isPlainFunction = typeof Component === "function" && !(Component.prototype as any)?.isReactComponent;
 
-    if (result instanceof Promise) {
-      if (!hasUse) {
-        console.warn(
-          `[Storyblok SDK] Component "${componentName}" is async and requires React 19+.`
+    if (isPlainFunction) {
+      const result = (Component as Function)({ blok });
+
+      if (result instanceof Promise) {
+        if (!hasUse) {
+          console.warn(
+            `[Storyblok SDK] Component "${componentName}" is async and requires React 19+.`
+          );
+          return null;
+        }
+        return (
+          <Suspense fallback={fallback}>
+            <AsyncBlok
+              promise={result}
+              cacheKey={cacheKey}
+              componentName={componentName}
+            />
+          </Suspense>
         );
-        return null;
       }
+
       return (
         <Suspense fallback={fallback}>
-          <AsyncBlok
-            promise={result}
-            cacheKey={cacheKey}
-            componentName={componentName}
-          />
+          {withSuppressHydrationWarning(result)}
         </Suspense>
       );
     }
 
-    // Sync component on client — wrap in Suspense to match server tree for hydration
+    // Non-function components (class, forwardRef, memo, strings) — use JSX
     return (
       <Suspense fallback={fallback}>
-        {withSuppressHydrationWarning(result)}
+        {withSuppressHydrationWarning(<Component blok={blok} />)}
       </Suspense>
     );
   }
