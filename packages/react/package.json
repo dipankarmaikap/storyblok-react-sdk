@@ -1,0 +1,41 @@
+{
+    "name": "@storyblok/react",
+    "version": "0.0.1",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        },
+        "./client": {
+            "types": "./dist/client.d.ts",
+            "import": "./dist/client.js"
+        }
+    },
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch"
+    },
+    "devDependencies": {
+        "@types/react": "^19.2.15",
+        "tsup": "^8.5.1",
+        "typescript": "^5.0.0"
+    },
+    "peerDependencies": {
+        "next": "^13 || ^14 || ^15 || ^16",
+        "react": "^17 || ^18 || ^19",
+        "react-dom": "^17 || ^18 || ^19"
+    },
+    "peerDependenciesMeta": {
+        "next": {
+            "optional": true
+        }
+    },
+    "dependencies": {
+        "@storyblok/js": "https://pkg.pr.new/@storyblok/js@bbc5723",
+        "@storyblok/live-preview": "https://pkg.pr.new/@storyblok/live-preview@bbc5723",
+        "@storyblok/richtext": "https://pkg.pr.new/@storyblok/richtext@bbc5723"
+    }
+}
