@@ -4,7 +4,7 @@ import type { ComponentMap } from "./create-resolver";
 import { createResolver, ResolverConfig } from "./create-resolver";
 import type { SbBlokData } from "./types";
 
-const promiseCache = new Map<string, WeakMap<object, Promise<unknown>>>();
+const promiseCache = new Map<string, Map<unknown, Promise<unknown>>>();
 const hasUse = typeof use === "function";
 const isServer = typeof window === "undefined";
 
@@ -18,29 +18,40 @@ function withSuppressHydrationWarning(element: unknown): ReactNode {
   return element as ReactNode;
 }
 
-function useCachedPromise(promise: Promise<unknown>, blok: SbBlokData, componentName: string) {
+function getSuspenseFallback(config: ResolverConfig | undefined, componentName: string) {
+  return config?.suspenseFallbacks?.[componentName]
+    ?? config?.suspenseFallback
+    ?? <div className="storyblok-blok-loading" />;
+}
+
+function getCacheKey(config: ResolverConfig | undefined, componentName: string, blok: SbBlokData) {
+  const fn = config?.cacheKeys?.[componentName] ?? ((b: SbBlokData) => b._uid ?? b);
+  return fn(blok);
+}
+
+function useCachedPromise(promise: Promise<unknown>, cacheKey: unknown, componentName: string) {
   let compCache = promiseCache.get(componentName);
   if (!compCache) {
-    compCache = new WeakMap();
+    compCache = new Map();
     promiseCache.set(componentName, compCache);
   }
-  let cached = compCache.get(blok);
+  let cached = compCache.get(cacheKey);
   if (!cached) {
     cached = promise.catch((err: unknown) => {
-      compCache!.delete(blok);
+      compCache!.delete(cacheKey);
       throw err;
     });
-    compCache.set(blok, cached);
+    compCache.set(cacheKey, cached);
   }
   return use(cached) as ReactNode;
 }
 
-function AsyncBlok({ promise, blok, componentName }: {
+function AsyncBlok({ promise, cacheKey, componentName }: {
   promise: Promise<unknown>;
-  blok: SbBlokData;
+  cacheKey: unknown;
   componentName: string;
 }) {
-  return withSuppressHydrationWarning(useCachedPromise(promise, blok, componentName));
+  return withSuppressHydrationWarning(useCachedPromise(promise, cacheKey, componentName));
 }
 
 export function createStoryblokRenderer(
@@ -55,7 +66,9 @@ export function createStoryblokRenderer(
       return null;
     }
 
-    const fallback = config?.suspenseFallback ?? <div className="storyblok-blok-loading" />;
+    const componentName = blok.component!;
+    const fallback = getSuspenseFallback(config, componentName);
+    const cacheKey = getCacheKey(config, componentName, blok);
 
     // Server (RSC/SSR): use JSX to preserve client/server boundary.
     // Async components work natively in RSC with Suspense.
@@ -73,7 +86,7 @@ export function createStoryblokRenderer(
     if (result instanceof Promise) {
       if (!hasUse) {
         console.warn(
-          `[Storyblok SDK] Component "${blok.component}" is async and requires React 19+.`
+          `[Storyblok SDK] Component "${componentName}" is async and requires React 19+.`
         );
         return null;
       }
@@ -81,8 +94,8 @@ export function createStoryblokRenderer(
         <Suspense fallback={fallback}>
           <AsyncBlok
             promise={result}
-            blok={blok}
-            componentName={blok.component!}
+            cacheKey={cacheKey}
+            componentName={componentName}
           />
         </Suspense>
       );

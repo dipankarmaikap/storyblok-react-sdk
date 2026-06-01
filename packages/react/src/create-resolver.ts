@@ -1,4 +1,6 @@
 import type { ElementType, ReactNode } from "react";
+import type { SbBlokData } from "./types";
+
 export type ComponentMap = Record<string, ElementType>;
 
 export type ResolverConfig = {
@@ -8,11 +10,26 @@ export type ResolverConfig = {
   fallback?: ElementType;
 
   /**
-   * Suspense fallback shown while an async component is loading.
+   * Default Suspense fallback shown while an async component is loading.
    *
    * @default <div className="storyblok-blok-loading" />
    */
   suspenseFallback?: ReactNode;
+
+  /**
+   * Per-component Suspense fallback overrides. Keyed by the Storyblok component name.
+   */
+  suspenseFallbacks?: Record<string, ReactNode>;
+
+  /**
+   * Custom cache key functions per component.
+   * Controls whether an async component's Promise is reused across renders.
+   *
+   * Default: `(blok) => blok._uid ?? blok` — stable, no re-fetch on unrelated edits.
+   * To always re-fetch: `(blok) => Math.random()`
+   * To re-fetch on version change: `(blok) => \`${blok._uid}-${blok.version}\``
+   */
+  cacheKeys?: Record<string, (blok: SbBlokData) => unknown>;
 
   /**
    * Log a warning when a component cannot be resolved.
