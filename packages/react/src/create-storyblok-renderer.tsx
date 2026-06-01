@@ -55,11 +55,13 @@ export function createStoryblokRenderer(
       return null;
     }
 
+    const fallback = config?.suspenseFallback ?? <div className="storyblok-blok-loading" />;
+
     // Server (RSC/SSR): use JSX to preserve client/server boundary.
     // Async components work natively in RSC with Suspense.
     if (isServer) {
       return (
-        <Suspense fallback={<div className="storyblok-blok-loading" />}>
+        <Suspense fallback={fallback}>
           {withSuppressHydrationWarning(<Component blok={blok} />)}
         </Suspense>
       );
@@ -67,24 +69,29 @@ export function createStoryblokRenderer(
 
     // Client: call directly to detect async components for use()
     const result = (Component as Function)({ blok });
-    if (!(result instanceof Promise)) {
-      return withSuppressHydrationWarning(result);
-    }
 
-    if (!hasUse) {
-      console.warn(
-        `[Storyblok SDK] Component "${blok.component}" is async and requires React 19+.`
+    if (result instanceof Promise) {
+      if (!hasUse) {
+        console.warn(
+          `[Storyblok SDK] Component "${blok.component}" is async and requires React 19+.`
+        );
+        return null;
+      }
+      return (
+        <Suspense fallback={fallback}>
+          <AsyncBlok
+            promise={result}
+            blok={blok}
+            componentName={blok.component!}
+          />
+        </Suspense>
       );
-      return null;
     }
 
+    // Sync component on client — wrap in Suspense to match server tree for hydration
     return (
-      <Suspense fallback={<div className="storyblok-blok-loading" />}>
-        <AsyncBlok
-          promise={result}
-          blok={blok}
-          componentName={blok.component!}
-        />
+      <Suspense fallback={fallback}>
+        {withSuppressHydrationWarning(result)}
       </Suspense>
     );
   }

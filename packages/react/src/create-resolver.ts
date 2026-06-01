@@ -1,4 +1,4 @@
-import type { ElementType } from "react";
+import type { ElementType, ReactNode } from "react";
 export type ComponentMap = Record<string, ElementType>;
 
 export type ResolverConfig = {
@@ -6,6 +6,13 @@ export type ResolverConfig = {
    * Component rendered when no matching component is found.
    */
   fallback?: ElementType;
+
+  /**
+   * Suspense fallback shown while an async component is loading.
+   *
+   * @default <div className="storyblok-blok-loading" />
+   */
+  suspenseFallback?: ReactNode;
 
   /**
    * Log a warning when a component cannot be resolved.
