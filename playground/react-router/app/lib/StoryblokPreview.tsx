@@ -1,9 +1,9 @@
 'use client';
-import { type ISbStoryData } from "@storyblok/react";
+import { type Story } from "@storyblok/react";
 import { StoryblokComponent } from "./storyblok";
 import { useStoryblokPreview } from "@storyblok/react/client";
 
-function StoryblokPreview({ story }: { story: ISbStoryData | null }) {
+function StoryblokPreview({ story }: { story: Story | null }) {
   const liveStory = useStoryblokPreview(story);
 
   if (!liveStory) {

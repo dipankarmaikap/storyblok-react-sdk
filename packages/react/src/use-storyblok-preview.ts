@@ -1,13 +1,13 @@
+import { Story } from '@storyblok/api-client';
 import { type BridgeParams, onStoryblokEditorEvent } from '@storyblok/live-preview';
-import type { ISbStoryData } from '@storyblok/js';
 import { useEffect, useState } from 'react';
 
-export function useStoryblokPreview<T = unknown>(
-    story: ISbStoryData<T> | null,
+export function useStoryblokPreview(
+    story: Story | null,
     options: BridgeParams = {},
-): ISbStoryData<T> | null {
+): Story | null {
 
-    const [bridgeStory, setBridgeStory] = useState<ISbStoryData<T> | null>(story);
+    const [bridgeStory, setBridgeStory] = useState<Story | null>(story);
     const storyId = story?.id ?? null;
     
     useEffect(() => {
@@ -17,7 +17,7 @@ export function useStoryblokPreview<T = unknown>(
         async function setup() {
             const cleanup = await onStoryblokEditorEvent(
                 (story) => {
-                    setBridgeStory(story as ISbStoryData<T>);
+                    setBridgeStory(story as Story);
                 },
                 options,
             );

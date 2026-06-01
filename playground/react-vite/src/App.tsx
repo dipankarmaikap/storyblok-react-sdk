@@ -1,20 +1,22 @@
 import { useEffect, useState } from "react";
-import { welcome, type ISbStoryData } from "@storyblok/react";
+import { welcome, type Story } from "@storyblok/react";
 import "./App.css";
-import { enableLivePreview, storyblokApi, StoryblokComponent } from "./lib/storyblok";
+import { enableLivePreview, client, StoryblokComponent } from "./lib/storyblok";
 import StoryblokPreview from "./lib/StoryblokPreview";
 
 function App() {
-  const [story, setStory] = useState<ISbStoryData | null>(null);
+  const [story, setStory] = useState<Story | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     async function loadStory() {
       try {
-        const response = await storyblokApi?.get("cdn/stories/home", {
-          version: "draft",
+        const { data } = await client.stories.get("home", {
+          query: {
+            version: "draft",
+          },
         });
 
-        setStory(response?.data?.story || null);
+        setStory(data?.story || null);
       } catch (err) {
         console.error("Failed to fetch Storyblok story:", err);
       } finally {

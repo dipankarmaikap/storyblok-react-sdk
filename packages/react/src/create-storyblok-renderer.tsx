@@ -1,6 +1,6 @@
 import type { ComponentMap } from "./create-resolver";
 import { createResolver, ResolverConfig } from "./create-resolver";
-import type { SbBlokData } from "@storyblok/js";
+import type { SbBlokData } from "./types";
 
 export function createStoryblokRenderer(
   components: ComponentMap,

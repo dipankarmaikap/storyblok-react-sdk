@@ -34,7 +34,7 @@
         }
     },
     "dependencies": {
-        "@storyblok/js": "https://pkg.pr.new/@storyblok/js@bbc5723",
+        "@storyblok/api-client": "^0.3.0",
         "@storyblok/live-preview": "https://pkg.pr.new/@storyblok/live-preview@bbc5723",
         "@storyblok/richtext": "https://pkg.pr.new/@storyblok/richtext@bbc5723"
     }
