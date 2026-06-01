@@ -1,10 +1,12 @@
-import { cloneElement, isValidElement, use } from "react";
+import { Suspense, cloneElement, isValidElement, use } from "react";
 import type { ReactElement, ReactNode } from "react";
 import type { ComponentMap } from "./create-resolver";
 import { createResolver, ResolverConfig } from "./create-resolver";
 import type { SbBlokData } from "./types";
 
 const promiseCache = new Map<string, WeakMap<object, Promise<unknown>>>();
+const hasUse = typeof use === "function";
+const isServer = typeof window === "undefined";
 
 function withSuppressHydrationWarning(element: unknown): ReactNode {
   if (isValidElement(element)) {
@@ -14,6 +16,31 @@ function withSuppressHydrationWarning(element: unknown): ReactNode {
     );
   }
   return element as ReactNode;
+}
+
+function useCachedPromise(promise: Promise<unknown>, blok: SbBlokData, componentName: string) {
+  let compCache = promiseCache.get(componentName);
+  if (!compCache) {
+    compCache = new WeakMap();
+    promiseCache.set(componentName, compCache);
+  }
+  let cached = compCache.get(blok);
+  if (!cached) {
+    cached = promise.catch((err: unknown) => {
+      compCache!.delete(blok);
+      throw err;
+    });
+    compCache.set(blok, cached);
+  }
+  return use(cached) as ReactNode;
+}
+
+function AsyncBlok({ promise, blok, componentName }: {
+  promise: Promise<unknown>;
+  blok: SbBlokData;
+  componentName: string;
+}) {
+  return withSuppressHydrationWarning(useCachedPromise(promise, blok, componentName));
 }
 
 export function createStoryblokRenderer(
@@ -27,28 +54,39 @@ export function createStoryblokRenderer(
     if (!Component) {
       return null;
     }
+
+    // Server (RSC/SSR): use JSX to preserve client/server boundary.
+    // Async components work natively in RSC with Suspense.
+    if (isServer) {
+      return (
+        <Suspense fallback={<div className="storyblok-blok-loading" />}>
+          {withSuppressHydrationWarning(<Component blok={blok} />)}
+        </Suspense>
+      );
+    }
+
+    // Client: call directly to detect async components for use()
     const result = (Component as Function)({ blok });
     if (!(result instanceof Promise)) {
       return withSuppressHydrationWarning(result);
     }
 
-    const componentName = blok.component!;
-    let compCache = promiseCache.get(componentName);
-    if (!compCache) {
-      compCache = new WeakMap();
-      promiseCache.set(componentName, compCache);
+    if (!hasUse) {
+      console.warn(
+        `[Storyblok SDK] Component "${blok.component}" is async and requires React 19+.`
+      );
+      return null;
     }
 
-    let promise = compCache.get(blok);
-    if (!promise) {
-      promise = result.catch((err: unknown) => {
-        compCache!.delete(blok);
-        throw err;
-      });
-      compCache.set(blok, promise);
-    }
-
-    return withSuppressHydrationWarning(use(promise));
+    return (
+      <Suspense fallback={<div className="storyblok-blok-loading" />}>
+        <AsyncBlok
+          promise={result}
+          blok={blok}
+          componentName={blok.component!}
+        />
+      </Suspense>
+    );
   }
 
   function StoryblokBlocks({ blocks }: { blocks: SbBlokData[] }) {
