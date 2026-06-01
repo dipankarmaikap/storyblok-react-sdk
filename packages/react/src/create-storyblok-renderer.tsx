@@ -3,9 +3,8 @@ import type { ElementType, ReactElement, ReactNode } from "react";
 import type { ComponentMap } from "./create-resolver";
 import { createResolver, ResolverConfig } from "./create-resolver";
 import type { SbBlokData } from "./types";
+import { createPromiseCache } from "./promise-cache";
 
-const promiseCache = new Map<string, Map<unknown, Promise<unknown>>>();
-const MAX_CACHE_SIZE = 1000;
 const hasUse = typeof use === "function";
 const isServer = typeof window === "undefined";
 
@@ -35,40 +34,20 @@ function getCacheKey(config: ResolverConfig | undefined, componentName: string, 
   return fn(blok);
 }
 
-function useCachedPromise(promise: Promise<unknown>, cacheKey: unknown, componentName: string) {
-  let compCache = promiseCache.get(componentName);
-  if (!compCache) {
-    compCache = new Map();
-    promiseCache.set(componentName, compCache);
-  }
-  let cached = compCache.get(cacheKey);
-  if (!cached) {
-    if (compCache.size >= MAX_CACHE_SIZE) {
-      const first = compCache.keys().next().value;
-      if (first !== undefined) compCache.delete(first);
-    }
-    cached = promise.catch((err: unknown) => {
-      compCache!.delete(cacheKey);
-      throw err;
-    });
-    compCache.set(cacheKey, cached);
-  }
-  return use(cached) as ReactNode;
-}
-
-function AsyncBlok({ promise, cacheKey, componentName }: {
-  promise: Promise<unknown>;
-  cacheKey: unknown;
-  componentName: string;
-}) {
-  return withSuppressHydrationWarning(useCachedPromise(promise, cacheKey, componentName));
-}
-
 export function createStoryblokRenderer(
   components: ComponentMap,
   config?: ResolverConfig
 ) {
   const resolver = createResolver(components, config);
+  const cache = createPromiseCache();
+
+  function AsyncBlok({ promise, cacheKey, componentName }: {
+    promise: Promise<unknown>;
+    cacheKey: unknown;
+    componentName: string;
+  }) {
+    return withSuppressHydrationWarning(use(cache.getOrSet(promise, cacheKey, componentName)) as ReactNode);
+  }
 
   function StoryblokComponent({ blok }: { blok: SbBlokData }) {
     const Component = resolver(blok.component || "");
@@ -102,7 +81,11 @@ export function createStoryblokRenderer(
           console.warn(
             `[Storyblok SDK] Component "${componentName}" is async and requires React 19+.`
           );
-          return null;
+          return (
+            <Suspense fallback={fallback}>
+              {fallback}
+            </Suspense>
+          );
         }
         return (
           <Suspense fallback={fallback}>
