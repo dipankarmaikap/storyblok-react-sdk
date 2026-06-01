@@ -11,15 +11,17 @@ export type ResolverConfig = {
 
   /**
    * Default Suspense fallback shown while an async component is loading.
+   * Pass a component reference or JSX.
    *
    * @default <div className="storyblok-blok-loading" />
    */
-  suspenseFallback?: ReactNode;
+  suspenseFallback?: ElementType | ReactNode;
 
   /**
    * Per-component Suspense fallback overrides. Keyed by the Storyblok component name.
+   * Pass a component reference or JSX.
    */
-  suspenseFallbacks?: Record<string, ReactNode>;
+  suspenseFallbacks?: Record<string, ElementType | ReactNode>;
 
   /**
    * Custom cache key functions per component.

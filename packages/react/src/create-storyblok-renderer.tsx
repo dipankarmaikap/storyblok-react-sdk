@@ -1,5 +1,5 @@
 import { Suspense, cloneElement, isValidElement, use } from "react";
-import type { ReactElement, ReactNode } from "react";
+import type { ElementType, ReactElement, ReactNode } from "react";
 import type { ComponentMap } from "./create-resolver";
 import { createResolver, ResolverConfig } from "./create-resolver";
 import type { SbBlokData } from "./types";
@@ -19,9 +19,14 @@ function withSuppressHydrationWarning(element: unknown): ReactNode {
 }
 
 function getSuspenseFallback(config: ResolverConfig | undefined, componentName: string) {
-  return config?.suspenseFallbacks?.[componentName]
-    ?? config?.suspenseFallback
-    ?? <div className="storyblok-blok-loading" />;
+  const fallback = config?.suspenseFallbacks?.[componentName]
+    ?? config?.suspenseFallback;
+  if (fallback == null) return <div className="storyblok-blok-loading" />;
+  if (typeof fallback === "function") {
+    const Comp = fallback as ElementType;
+    return <Comp />;
+  }
+  return fallback as ReactNode;
 }
 
 function getCacheKey(config: ResolverConfig | undefined, componentName: string, blok: SbBlokData) {
