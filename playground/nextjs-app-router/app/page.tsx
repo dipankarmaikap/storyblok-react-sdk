@@ -1,6 +1,7 @@
 import { welcome } from "@storyblok/react";
-import { StoryblokComponent, enableLivePreview, client } from "./lib/storyblok";
-import StoryblokPreview from "./lib/StoryblokPreview";
+import { StoryblokComponent, client } from "./lib/storyblok";
+import { renderContent } from "./lib/actions";
+import LiveRefresh from "./lib/LiveRefresh";
 
 export default async function Home() {
   const { data } = await client.stories.get("home", { query: { version: 'draft' } });
@@ -10,18 +11,12 @@ export default async function Home() {
     return <div>Story not found</div>;
   }
 
-  if (enableLivePreview) {
-    return (
-      <main>
-        <h1>{welcome("to Next.js App Router! Live Preview")}</h1>
-        <StoryblokPreview story={story} />
-      </main>
-    )
-  }
   return (
     <main>
-      <h1>{welcome("to Next.js App Router! Production")}</h1>
-      <StoryblokComponent blok={story.content} />
+      <h1>{welcome("to Next.js App Router!")}</h1>
+      <LiveRefresh story={story} render={renderContent}>
+        <StoryblokComponent blok={story.content} />
+      </LiveRefresh>
     </main>
   );
 }

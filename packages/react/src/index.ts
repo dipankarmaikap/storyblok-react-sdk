@@ -6,5 +6,7 @@ export { createApiClient, type ContentApiClientConfig, type Story } from "@story
 export * from "./create-resolver";
 export { createStoryblokRenderer } from "./create-storyblok-renderer";
 export { storyblokEditable } from "@storyblok/live-preview";
+export { serverBlock, isServerBlock, SERVER_BLOCK_TAG } from "./server-block";
+export type { ServerBlockEntry } from "./server-block";
 
 export type { SbBlokData } from "./types";

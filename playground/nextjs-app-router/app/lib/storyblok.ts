@@ -8,7 +8,7 @@ import FeaturedArticles from "../components/FeaturedArticles";
 import SuspenseFallback from "../components/SuspenseFallback";
 
 const accessToken = process.env.NEXT_PUBLIC_STORYBLOK_API_KEY!;
-export const enableLivePreview = process.env.NEXT_PUBLIC_STORYBLOK_ENABLE_LIVEPREVIEW === "true";
+
 export const client = createApiClient({
   accessToken,
 });
@@ -53,5 +53,3 @@ export const { StoryblokComponent, StoryblokBlocks } = createStoryblokRenderer(
   },
   resolveConfig
 );
-
-

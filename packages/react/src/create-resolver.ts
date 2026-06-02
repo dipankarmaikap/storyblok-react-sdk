@@ -1,7 +1,10 @@
 import type { ElementType, ReactNode } from "react";
 import type { SbBlokData } from "./types";
+import type { ServerBlockEntry } from "./server-block";
+import { isServerBlock } from "./server-block";
 
-export type ComponentMap = Record<string, ElementType>;
+export type ComponentMapEntry = ElementType | ServerBlockEntry;
+export type ComponentMap = Record<string, ComponentMapEntry>;
 export type ComponentMapProvider = ComponentMap | (() => ComponentMap);
 
 export type ResolverConfig = {
@@ -53,7 +56,12 @@ export type ResolverConfig = {
   warnMissingComponents?: boolean;
 };
 
-export type StoryblokResolver = (blockName: string) => ElementType | null;
+export type ResolvedEntry =
+  | { type: 'component'; Component: ElementType }
+  | { type: 'serverBlock'; entry: ServerBlockEntry }
+  | null;
+
+export type StoryblokResolver = (blockName: string) => ResolvedEntry;
 
 /**
  * Creates an isolated resolver instance.
@@ -68,15 +76,21 @@ export function createResolver(
 ): StoryblokResolver {
   const getComponents = typeof components === 'function' ? components : () => components;
 
-  return function resolve(blockName: string): ElementType | null {
+  return function resolve(blockName: string): ResolvedEntry {
     const map = getComponents();
-    const Component = map[blockName];
-    if (Component) {
-      return Component;
+    const entry = map[blockName];
+
+    if (entry) {
+      if (isServerBlock(entry)) {
+        return { type: 'serverBlock', entry };
+      }
+      return { type: 'component', Component: entry as ElementType };
     }
+
     if (config?.fallback) {
-      return config.fallback;
+      return { type: 'component', Component: config.fallback };
     }
+
     if (config?.warnMissingComponents !== false) {
       console.warn(`[Storyblok SDK] Component "${blockName}" is not registered.`);
     }

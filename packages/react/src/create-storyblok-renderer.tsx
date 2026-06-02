@@ -57,13 +57,45 @@ export function createStoryblokRenderer(
   }
 
   function StoryblokComponent({ blok }: { blok: SbBlokData }) {
-    const Component = resolver(blok.component || "");
-    if (!Component) {
+    const resolved = resolver(blok.component || "");
+    if (!resolved) {
       return null;
     }
 
     const componentName = blok.component!;
     const fallback = getSuspenseFallback(config, componentName);
+
+    // Handle serverBlock entries
+    if (resolved.type === 'serverBlock') {
+      const cacheKey = getCacheKey(config, componentName, blok);
+      // Call the render function directly — on the server it's a direct call,
+      // on the client it's a server action (RPC to server). Both return a Promise.
+      const promise = resolved.entry.render(blok);
+
+      if (!hasUse) {
+        console.warn(
+          `[Storyblok SDK] serverBlock "${componentName}" requires React 19+ (use() hook).`
+        );
+        return <Suspense fallback={fallback}>{fallback}</Suspense>;
+      }
+
+      if (cacheKey != null) {
+        return (
+          <Suspense fallback={fallback}>
+            <AsyncBlok promise={promise} cacheKey={cacheKey} componentName={componentName} />
+          </Suspense>
+        );
+      }
+
+      return (
+        <Suspense fallback={fallback}>
+          {withSuppressHydrationWarning(use(promise) as ReactNode)}
+        </Suspense>
+      );
+    }
+
+    // Regular component handling (unchanged)
+    const Component = resolved.Component;
     const cacheKey = getCacheKey(config, componentName, blok);
 
     // Server (RSC/SSR): use JSX to preserve client/server boundary.

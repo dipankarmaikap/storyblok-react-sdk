@@ -3,6 +3,7 @@ import {
   type Story,
   type SbBlokData,
 } from "@storyblok/react";
+import { SbField } from "@storyblok/react/client";
 import { client } from "../lib/storyblok";
 
 type FeaturedArticlesBlok = SbBlokData & {
@@ -39,7 +40,11 @@ export default async function FeaturedArticles({
 
   return (
     <section {...storyblokEditable(blok)}>
-      {blok.title && <h2 className="text-2xl font-bold">{blok.title}</h2>}
+      {blok.title && (
+        <h2 className="text-2xl font-bold">
+          <SbField blok={blok} field="title" />
+        </h2>
+      )}
       {resolvedArticles.length > 0 && (
         <ul>
           {resolvedArticles.map((article) => (
