@@ -2,6 +2,7 @@ import type { ElementType, ReactNode } from "react";
 import type { SbBlokData } from "./types";
 
 export type ComponentMap = Record<string, ElementType>;
+export type ComponentMapProvider = ComponentMap | (() => ComponentMap);
 
 export type ResolverConfig = {
   /**
@@ -24,12 +25,23 @@ export type ResolverConfig = {
   suspenseFallbacks?: Record<string, ElementType | ReactNode>;
 
   /**
-   * Custom cache key functions per component.
-   * Controls whether an async component's Promise is reused across renders.
+   * Per-component cache keys for async components.
    *
-   * Default: `(blok) => blok._uid ?? blok` — stable, no re-fetch on unrelated edits.
-   * To always re-fetch: `(blok) => Math.random()`
-   * To re-fetch on version change: `(blok) => \`${blok._uid}-${blok.version}\``
+   * Async component results are cached automatically using all string values
+   * from the blok as the cache key — Storyblok content edits naturally
+   * invalidate the cache.
+   *
+   * Provide a custom function when the default key is not granular enough
+   * (e.g. nested objects/arrays) or to reduce key size. Return `null` to
+   * opt out of caching for a specific component.
+   *
+   * @example
+   * ```ts
+   * cacheKeys: {
+   *   'featured-articles': (blok) =>
+   *     [blok._uid, blok.title, (blok.articles ?? []).map((a) => a.uuid).join(',')].join('|')
+   * }
+   * ```
    */
   cacheKeys?: Record<string, (blok: SbBlokData) => unknown>;
 
@@ -44,16 +56,21 @@ export type ResolverConfig = {
 export type StoryblokResolver = (blockName: string) => ElementType | null;
 
 /**
- * Creates an isolated resolver instance to pass into <StoryblokContent />.
+ * Creates an isolated resolver instance.
+ * Accepts either a static ComponentMap or a factory function that returns one.
+ * Using a factory function ensures live ES module bindings are read on every
+ * render, which makes HMR / Fast Refresh work correctly when component source
+ * files change.
  */
 export function createResolver(
-  components: ComponentMap,
+  components: ComponentMapProvider,
   config?: ResolverConfig
 ): StoryblokResolver {
-  
-  // Returns a closure that the renderer uses to look up components
+  const getComponents = typeof components === 'function' ? components : () => components;
+
   return function resolve(blockName: string): ElementType | null {
-    const Component = components[blockName];
+    const map = getComponents();
+    const Component = map[blockName];
     if (Component) {
       return Component;
     }
@@ -63,6 +80,6 @@ export function createResolver(
     if (config?.warnMissingComponents !== false) {
       console.warn(`[Storyblok SDK] Component "${blockName}" is not registered.`);
     }
-    return null; // Return null so the app doesn't crash on unknown blocks
+    return null;
   };
 }

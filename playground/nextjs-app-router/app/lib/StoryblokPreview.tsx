@@ -4,8 +4,10 @@ import { StoryblokComponent } from "./storyblok";
 import { useStoryblokPreview } from "@storyblok/react/client";
 
 function StoryblokPreview({ story }: { story: Story | null }) {
-  const liveStory = useStoryblokPreview(story);
-
+  const liveStory = useStoryblokPreview(story,{
+    resolveRelations: ['featured-articles.articles']
+  });
+ 
   if (!liveStory) {
     return null;
   }

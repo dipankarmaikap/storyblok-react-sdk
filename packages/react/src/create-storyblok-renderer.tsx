@@ -1,7 +1,6 @@
 import { Suspense, cloneElement, isValidElement, use } from "react";
 import type { ElementType, ReactElement, ReactNode } from "react";
-import type { ComponentMap } from "./create-resolver";
-import { createResolver, ResolverConfig } from "./create-resolver";
+import { createResolver, type ComponentMapProvider, type ResolverConfig } from "./create-resolver";
 import type { SbBlokData } from "./types";
 import { createPromiseCache } from "./promise-cache";
 
@@ -30,12 +29,20 @@ function getSuspenseFallback(config: ResolverConfig | undefined, componentName: 
 }
 
 function getCacheKey(config: ResolverConfig | undefined, componentName: string, blok: SbBlokData) {
-  const fn = config?.cacheKeys?.[componentName] ?? ((b: SbBlokData) => b._uid ?? b);
-  return fn(blok);
+  const fn = config?.cacheKeys?.[componentName];
+  if (fn) return fn(blok);
+  const parts: string[] = [];
+  for (const key in blok) {
+    const value = blok[key];
+    if (typeof value === 'string') {
+      parts.push(`${key}:${value}`);
+    }
+  }
+  return parts.length > 0 ? parts.join('|') : blok._uid ?? null;
 }
 
 export function createStoryblokRenderer(
-  components: ComponentMap,
+  components: ComponentMapProvider,
   config?: ResolverConfig
 ) {
   const resolver = createResolver(components, config);
@@ -69,8 +76,8 @@ export function createStoryblokRenderer(
       );
     }
 
-    // Client: function components can be called directly to detect async for use()
-    // Class components, forwardRef, memo, etc. must use JSX.
+    // Client: plain functions are called directly to detect async (Promise return).
+    // Class components, forwardRef, memo, etc. use JSX.
     const isPlainFunction = typeof Component === "function" && !(Component.prototype as any)?.isReactComponent;
 
     if (isPlainFunction) {
@@ -87,20 +94,31 @@ export function createStoryblokRenderer(
             </Suspense>
           );
         }
+        // Cache key present → deduplicate in-flight promises via cache.
+        // Default key is derived from all string values in the blok.
+        if (cacheKey != null) {
+          return (
+            <Suspense fallback={fallback}>
+              <AsyncBlok
+                promise={result}
+                cacheKey={cacheKey}
+                componentName={componentName}
+              />
+            </Suspense>
+          );
+        }
+        // No caching — pass the promise to React's use() directly.
         return (
           <Suspense fallback={fallback}>
-            <AsyncBlok
-              promise={result}
-              cacheKey={cacheKey}
-              componentName={componentName}
-            />
+            {withSuppressHydrationWarning(use(result) as ReactNode)}
           </Suspense>
         );
       }
 
+      // Sync component: use JSX so Fast Refresh can track instances.
       return (
         <Suspense fallback={fallback}>
-          {withSuppressHydrationWarning(result)}
+          {withSuppressHydrationWarning(<Component blok={blok} />)}
         </Suspense>
       );
     }
