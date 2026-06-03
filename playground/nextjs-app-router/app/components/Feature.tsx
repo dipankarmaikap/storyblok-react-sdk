@@ -1,5 +1,4 @@
 import { type SbBlokData, storyblokEditable } from "@storyblok/react";
-import { SbField } from "@storyblok/react/client";
 
 // Only runs on the server — client skips server-only env access
 async function getSecretToken(): Promise<string | null> {
@@ -18,10 +17,10 @@ export default async function Feature({ blok }: FeatureProps) {
   return (
     <div className="feature" {...storyblokEditable(blok)}>
       <h2 className="text-2xl font-bold">
-        <SbField blok={blok} field="name" />
+        {blok.name}
       </h2>
       <p>
-        <SbField blok={blok} field="description" />
+        {blok.description}
       </p>
       <p className="text-xs text-gray-400 mt-2">
         {masked ? `\uD83D\uDD10 DB token: ${masked}` : ''}
