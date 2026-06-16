@@ -6,12 +6,12 @@ interface GridProps {
 }
 
 export default function Grid({ blok }: GridProps) {
+  if (!blok.columns || blok.columns.length === 0) {
+    return null;
+  }
   return (
     <section className="grid" {...storyblokEditable(blok)}>
-      {
-        blok.columns ?
-          <StoryblokBlocks blocks={blok.columns} /> : null
-      }
+      <StoryblokBlocks blocks={blok.columns} />
     </section>
   );
 };

@@ -6,6 +6,7 @@ import Feature from "../components/Feature";
 import FallbackBlock from "../components/FallbackBlock";
 import FeaturedArticles from "../components/FeaturedArticles";
 import SuspenseFallback from "../components/SuspenseFallback";
+import { WeatherWidget } from "../components/WeatherWidget";
 
 const accessToken = process.env.NEXT_PUBLIC_STORYBLOK_API_KEY!;
 
@@ -49,6 +50,7 @@ export const { StoryblokComponent, StoryblokBlocks } = createStoryblokRenderer(
     feature: Feature,
     teaser: Teaser,
     'featured-articles': FeaturedArticles,
+    'weather_widget': WeatherWidget
 
   },
   resolveConfig

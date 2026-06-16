@@ -5,12 +5,12 @@ interface PageProps {
   blok: SbBlokData & { body: SbBlokData[] };
 }
 export default function Page({ blok }: PageProps) {
+  if (!blok.body || blok.body.length === 0) {
+    return null;
+  }
   return (
     <section {...storyblokEditable(blok)}>
-      {
-        blok.body ?
-          <StoryblokBlocks blocks={blok.body} /> : null
-      }
+      <StoryblokBlocks blocks={blok.body} />
     </section>
   );
 }
